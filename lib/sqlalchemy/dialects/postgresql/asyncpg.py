@@ -369,8 +369,12 @@ class AsyncAdapt_asyncpg_cursor:
                 )
             )
 
-    async def _prepare_and_execute(self, operation, parameters):
+    async def _prepare_and_execute(self, operation, parameters, context=None):
         adapt_connection = self._adapt_connection
+
+        execution_options = context.execution_options if context is not None else {}
+
+        asyncpg_timeout = execution_options.get('asyncpg_timeout')
 
         async with adapt_connection._execute_mutex:
 
@@ -406,10 +410,10 @@ class AsyncAdapt_asyncpg_cursor:
                     self.description = None
 
                 if self.server_side:
-                    self._cursor = await prepared_stmt.cursor(*parameters)
+                    self._cursor = await prepared_stmt.cursor(*parameters, timeout=asyncpg_timeout)
                     self.rowcount = -1
                 else:
-                    self._rows = await prepared_stmt.fetch(*parameters)
+                    self._rows = await prepared_stmt.fetch(*parameters, timeout=asyncpg_timeout)
                     status = prepared_stmt.get_statusmsg()
 
                     reg = re.match(
@@ -423,8 +427,12 @@ class AsyncAdapt_asyncpg_cursor:
             except Exception as error:
                 self._handle_exception(error)
 
-    async def _executemany(self, operation, seq_of_parameters):
+    async def _executemany(self, operation, seq_of_parameters, context=None):
         adapt_connection = self._adapt_connection
+
+        execution_options = context.execution_options if context is not None else {}
+
+        asyncpg_timeout = execution_options.get('asyncpg_timeout')
 
         async with adapt_connection._execute_mutex:
             await adapt_connection._check_type_cache_invalidation(
@@ -440,14 +448,14 @@ class AsyncAdapt_asyncpg_cursor:
 
             try:
                 return await self._connection.executemany(
-                    operation, seq_of_parameters
+                    operation, seq_of_parameters, timeout=asyncpg_timeout
                 )
             except Exception as error:
                 self._handle_exception(error)
 
-    def execute(self, operation, parameters=None):
+    def execute(self, operation, parameters=None, context=None):
         self._adapt_connection.await_(
-            self._prepare_and_execute(operation, parameters)
+            self._prepare_and_execute(operation, parameters, context=context)
         )
 
     def executemany(self, operation, seq_of_parameters):

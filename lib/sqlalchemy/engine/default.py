@@ -702,13 +702,13 @@ class DefaultDialect(interfaces.Dialect):
         connection.execute(expression.ReleaseSavepointClause(name))
 
     def do_executemany(self, cursor, statement, parameters, context=None):
-        cursor.executemany(statement, parameters)
+        cursor.executemany(statement, parameters, context=context)
 
     def do_execute(self, cursor, statement, parameters, context=None):
-        cursor.execute(statement, parameters)
+        cursor.execute(statement, parameters, context=context)
 
     def do_execute_no_params(self, cursor, statement, context=None):
-        cursor.execute(statement)
+        cursor.execute(statement, context=context)
 
     def is_disconnect(self, e, connection, cursor):
         return False
